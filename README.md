@@ -1,0 +1,2 @@
+# mujoco_moveit_panda
+使用mujoco仿真panda机械臂，并通过moveit运动控制
