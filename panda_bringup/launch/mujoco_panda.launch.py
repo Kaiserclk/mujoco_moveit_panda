@@ -28,13 +28,13 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
-    pkg_share = FindPackageShare("mujoco_ros2_control_demos")
+    pkg_share = FindPackageShare("panda_bringup")
 
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([pkg_share, "demo_resources", "panda", "panda_robot.urdf"]),
+            PathJoinSubstitution([pkg_share, "urdf", "panda", "panda_robot.urdf"]),
             " headless:=",
             LaunchConfiguration("headless"),
         ]
