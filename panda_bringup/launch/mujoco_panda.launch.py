@@ -29,12 +29,13 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context, *args, **kwargs):
     pkg_share = FindPackageShare("panda_bringup")
+    panda_description_share=FindPackageShare("panda_description")
 
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([pkg_share, "urdf", "panda", "panda_robot.urdf"]),
+            PathJoinSubstitution([panda_description_share, "urdf", "panda.urdf"]),
             " headless:=",
             LaunchConfiguration("headless"),
         ]
@@ -43,7 +44,7 @@ def launch_setup(context, *args, **kwargs):
     robot_description_str = robot_description_content.perform(context)
     robot_description = {"robot_description": ParameterValue(value=robot_description_str, value_type=str)}
 
-    parameters_file = PathJoinSubstitution([pkg_share, "config", "panda_controllers.yaml"])
+    parameters_file = PathJoinSubstitution([pkg_share, "config", "ros2_controllers.yaml"])
 
     nodes = []
 
@@ -73,7 +74,7 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    controllers_to_spawn = ["joint_state_broadcaster", "arm_controller", "gripper_controller"]
+    controllers_to_spawn = ["joint_state_broadcaster", "panda_arm_controller", "panda_hand_controller"]
     for controller in controllers_to_spawn:
         nodes.append(
             Node(
