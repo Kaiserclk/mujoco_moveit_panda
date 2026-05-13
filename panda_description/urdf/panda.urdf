@@ -3,7 +3,7 @@
 
   <link name="world"/>
   
-  <link name="link0">
+  <link name="panda_link0">
       <visual>
           <geometry>
               <mesh filename="package://panda_description/meshes/visual/link0.dae" />
@@ -18,7 +18,7 @@
   
   <joint name="base_joint" type="fixed">
     <parent link="world"/>
-    <child link="link0"/>
+    <child link="panda_link0"/>
   </joint>
     <link name="panda_link1">
         <visual>
@@ -35,7 +35,7 @@
     <joint name="panda_joint1" type="revolute">
         <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973" />
         <origin rpy="0 0 0" xyz="0 0 0.333" />
-        <parent link="link0" />
+        <parent link="panda_link0" />
         <child link="panda_link1" />
         <axis xyz="0 0 1" />
         <limit effort="87" lower="-2.9671" upper="2.9671" velocity="2.3925" />
@@ -243,7 +243,7 @@
 
         <joint name="panda_joint2">
         <command_interface name="position"/>
-        <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="position"><param name="initial_value">-0.785</param></state_interface>
         <state_interface name="velocity"/>
         <state_interface name="effort"/>
         </joint>
@@ -257,7 +257,7 @@
 
         <joint name="panda_joint4">
         <command_interface name="position"/>
-        <state_interface name="position"><param name="initial_value">-0.0698</param></state_interface>
+        <state_interface name="position"><param name="initial_value">-2.356</param></state_interface>
         <state_interface name="velocity"/>
         <state_interface name="effort"/>
         </joint>
@@ -271,14 +271,14 @@
 
         <joint name="panda_joint6">
         <command_interface name="position"/>
-        <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="position"><param name="initial_value">1.571</param></state_interface>
         <state_interface name="velocity"/>
         <state_interface name="effort"/>
         </joint>
 
         <joint name="panda_joint7">
         <command_interface name="position"/>
-        <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="position"><param name="initial_value">0.785</param></state_interface>
         <state_interface name="velocity"/>
         <state_interface name="effort"/>
         </joint>

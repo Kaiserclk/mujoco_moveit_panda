@@ -4,16 +4,9 @@
 Usage:
     ros2 launch mujoco_ros2_control_demos mujoco_panda.launch.py
     ros2 launch mujoco_ros2_control_demos mujoco_panda.launch.py headless:=true
-
-Control the arm:
-    ros2 topic pub /arm_controller/commands std_msgs/msg/Float64MultiArray "data: [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]"
-
-Control the gripper:
-    ros2 topic pub /gripper_controller/commands std_msgs/msg/Float64MultiArray "data: [0.04]"
 """
 
-import os
-
+import os 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, Shutdown
 from launch.substitutions import (
