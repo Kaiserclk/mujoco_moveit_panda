@@ -1,43 +1,3 @@
-/*******************************************************************************
- * BSD 3-Clause License
- *
- * Copyright (c) 2019, Los Alamos National Security, LLC
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * * Neither the name of the copyright holder nor the names of its
- *   contributors may be used to endorse or promote products derived from
- *   this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *******************************************************************************/
-
-/*      Title       : servo.hpp
- *      Project     : moveit_servo
- *      Created     : 05/17/2023
- *      Author      : Brian O'Neil, Andy Zelenak, Blake Anderson, V Mohammed Ibrahim
- *
- *      Description : The core servoing logic.
- */
 
 #pragma once
 
@@ -67,156 +27,154 @@ public:
 
   ~Servo();
 
-  // Disable copy construction.
+  // 禁用拷贝构造
   Servo(const Servo&) = delete;
 
-  // Disable copy assignment.
+  // 禁用拷贝赋值
   Servo& operator=(Servo&) = delete;
 
   /**
-   * \brief Computes the joint state required to follow the given command.
-   * @param robot_state RobotStatePtr instance used for calculating the next joint state.
-   * @param command The command to follow, std::variant type, can handle JointJog, Twist and Pose.
-   * @return The required joint state.
+   * \brief 计算遵循给定命令所需的关节状态
+   * @param robot_state 用于计算下一个关节状态的 RobotStatePtr 实例
+   * @param command 要遵循的命令，std::variant 类型，可处理 JointJog、Twist 和 Pose
+   * @return 所需的关节状态
    */
   KinematicState getNextJointState(const moveit::core::RobotStatePtr& robot_state, const ServoInput& command);
 
   /**
-   * \brief Set the type of incoming servo command.
-   * @param command_type The type of command servo should expect.
+   * \brief 设置传入伺服命令的类型
+   * @param command_type 伺服应该期望的命令类型
    */
   void setCommandType(const CommandType& command_type);
 
   /**
-   * \brief Get the type of command that servo is currently expecting.
-   * @return The type of command.
+   * \brief 获取伺服当前期望的命令类型
+   * @return 命令类型
    */
   CommandType getCommandType() const;
 
   /**
-   * \brief Get the current status of servo.
-   * @return The current status.
+   * \brief 获取伺服的当前状态
+   * @return 当前状态
    */
   StatusCode getStatus() const;
 
   /**
-   * \brief Get the message associated with the current servo status.
-   * @return The status message.
+   * \brief 获取与当前伺服状态关联的消息
+   * @return 状态消息
    */
   std::string getStatusMessage() const;
 
   /**
-   * \brief Start/Stop collision checking thread.
-   * @param check_collision Stops collision checking thread if false, starts it if true.
+   * \brief 启动/停止碰撞检查线程
+   * @param check_collision 为 false 时停止碰撞检查线程，为 true 时启动
    */
   void setCollisionChecking(const bool check_collision);
 
   /**
-   * \brief Returns the most recent servo parameters.
-   * @return The servo parameters.
+   * \brief 获取最新的伺服参数
+   * @return 伺服参数
    */
   servo::Params& getParams();
 
   /**
-   * \brief Get the current state of the robot as given by planning scene monitor.
-   * This may block if a current robot state is not available immediately.
-   * @param block_for_current_state If true, we explicitly wait for a new robot state
-   * @return The current state of the robot.
+   * \brief 获取规划场景监视器给出的机器人当前状态
+   * 如果当前机器人状态立即可用，此方法可能会阻塞
+   * @param block_for_current_state 如果为 true，则显式等待新的机器人状态
+   * @return 机器人的当前状态
    */
   KinematicState getCurrentRobotState(bool block_for_current_state) const;
 
   /**
-   * \brief Smoothly halt at a commanded state when command goes stale.
-   * @param halt_state The desired halting state.
-   * @return A pair where the first element is a Boolean indicating whether the robot has stopped, and the second is a
-   * state stepping towards the desired halting state.
+   * \brief 当命令过期时，在 commanded 状态下平滑停止
+   * @param halt_state 期望的停止状态
+   * @return 一个 pair，第一个元素是布尔值，表示机器人是否已停止，第二个是向期望停止状态步进的状态
    */
   std::pair<bool, KinematicState> smoothHalt(const KinematicState& halt_state);
 
   /**
-   * \brief Applies smoothing to an input state, if a smoothing plugin is set.
-   * @param state The state to be updated by the smoothing plugin.
+   * \brief 如果设置了平滑插件，则对输入状态应用平滑处理
+   * @param state 要被平滑插件更新的状态
    */
   void doSmoothing(KinematicState& state);
 
   /**
-   * \brief Resets the smoothing plugin, if set, to a specified state.
-   * @param state The desired state to reset the smoothing plugin to.
+   * \brief 将平滑插件重置到指定状态（如果已设置）
+   * @param state 期望将平滑插件重置到的状态
    */
   void resetSmoothing(const KinematicState& state);
 
 private:
   /**
-   * \brief Finds the transform from the planning frame to a specified command frame.
-   * If the command frame is part of the robot model, directly look up the transform using the robot model.
-   * Else, fall back to using TF to look up the transform.
-   * @param command_frame The command frame name.
-   * @param planning_frame The planning frame name.
-   * @return The transformation between planning frame and command frame, or std::nullopt if there was a failure looking
-   * up a transform.
+   * \brief 查找从规划帧到指定命令帧的变换
+   * 如果命令帧是机器人模型的一部分，直接使用机器人模型查找变换
+   * 否则，回退到使用 TF 查找变换
+   * @param command_frame 命令帧名称
+   * @param planning_frame 规划帧名称
+   * @return 规划帧和命令帧之间的变换，如果查找变换失败则返回 std::nullopt
    */
   std::optional<Eigen::Isometry3d> getPlanningToCommandFrameTransform(const std::string& command_frame,
                                                                       const std::string& planning_frame) const;
 
   /**
-   * \brief Convert a given twist command to planning frame,
-   * The command frame specified by `command.frame_id` is expected to be a stationary frame or end-effector frame.
-   * References:
+   * \brief 将给定的速度命令转换到规划帧
+   * `command.frame_id` 指定的命令帧应该是静止帧或末端执行器帧
+   * 参考资料:
    * https://core.ac.uk/download/pdf/154240607.pdf
    * https://www.seas.upenn.edu/~meam520/notes02/Forces8.pdf
-   * @param command The twist command to be converted.
-   * @param planning_frame The name of the planning frame.
-   * @return The transformed twist command.
+   * @param command 要转换的速度命令
+   * @param planning_frame 规划帧的名称
+   * @return 转换后的速度命令
    */
   std::optional<TwistCommand> toPlanningFrame(const TwistCommand& command, const std::string& planning_frame) const;
 
   /**
-   * \brief Convert a given pose command to planning frame
-   * @param command The pose command to be converted.
-   * @param planning_frame The name of the planning frame.
-   * @return The transformed pose command.
+   * \brief 将给定的位姿命令转换到规划帧
+   * @param command 要转换的位姿命令
+   * @param planning_frame 规划帧的名称
+   * @return 转换后的位姿命令
    */
   std::optional<PoseCommand> toPlanningFrame(const PoseCommand& command, const std::string& planning_frame) const;
 
   /**
-   * \brief Compute the change in joint position required to follow the received command.
-   * @param command The incoming servo command.
-   * @param robot_state RobotStatePtr instance used for calculating the command.
-   * @return The joint position change required (delta).
+   * \brief 计算遵循接收到的命令所需的关节位置变化
+   * @param command 传入的伺服命令
+   * @param robot_state 用于计算命令的 RobotStatePtr 实例
+   * @return 所需的关节位置变化（增量）
    */
   Eigen::VectorXd jointDeltaFromCommand(const ServoInput& command, const moveit::core::RobotStatePtr& robot_state);
 
   /**
-   * \brief Validate the servo parameters
-   * @param servo_params The servo parameters
-   * @return True if parameters are valid, else False
+   * \brief 验证伺服参数
+   * @param servo_params 伺服参数
+   * @return 如果参数有效则返回 true，否则返回 false
    */
   bool validateParams(const servo::Params& servo_params);
 
   /**
-   * \brief Updates the servo parameters and performs validations.
+   * \brief 更新伺服参数并执行验证
    */
   bool updateParams();
 
   /**
-   * \brief Create and initialize the smoothing plugin to be used by servo.
+   * \brief 创建并初始化伺服要使用的平滑插件
    */
   void setSmoothingPlugin();
 
   /**
-   * \brief Apply halting logic to specified joints.
-   * @param joints_to_halt The indices of joints to be halted.
-   * @param current_state The current kinematic state.
-   * @param target_state The target kinematic state.
-   * @return The bounded kinematic state.
+   * \brief 对指定关节应用停止逻辑
+   * @param joints_to_halt 要停止的关节索引
+   * @param current_state 当前运动学状态
+   * @param target_state 目标运动学状态
+   * @return 边界约束后的运动学状态
    */
   KinematicState haltJoints(const std::vector<size_t>& joints_to_halt, const KinematicState& current_state,
                             const KinematicState& target_state) const;
 
-  // Variables
+  // 变量
 
   StatusCode servo_status_;
-  // This needs to be threadsafe so it can be updated in realtime.
+  // 此变量需要线程安全，以便可以实时更新
   std::atomic<CommandType> expected_command_type_;
 
   servo::Params servo_params_;
@@ -225,20 +183,20 @@ private:
   std::shared_ptr<const servo::ParamListener> servo_param_listener_;
   planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_;
 
-  // This value will be updated by CollisionMonitor in a separate thread.
+  // 此值将由 CollisionMonitor 在单独的线程中更新
   std::atomic<double> collision_velocity_scale_ = 1.0;
   std::unique_ptr<CollisionMonitor> collision_monitor_;
 
-  // Plugin loader
+  // 插件加载器
   std::unique_ptr<pluginlib::ClassLoader<online_signal_smoothing::SmoothingBaseClass>> smoother_loader_;
 
-  // Pointer to the (optional) smoothing plugin.
+  // 指向（可选）平滑插件的指针
   pluginlib::UniquePtr<online_signal_smoothing::SmoothingBaseClass> smoother_ = nullptr;
 
-  // Map between joint subgroup names and corresponding joint name - move group indices map
+  // 关节子组名称与对应关节名称 - move group 索引映射之间的关系
   std::unordered_map<std::string, JointNameToMoveGroupIndexMap> joint_name_to_index_maps_;
 
-  // The current joint limit safety margins for each active joint position variable.
+  // 每个活动关节位置变量的当前关节限制安全边界
   std::vector<double> joint_limit_margins_;
 };
 
