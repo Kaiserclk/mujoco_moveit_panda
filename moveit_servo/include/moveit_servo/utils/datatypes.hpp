@@ -73,8 +73,8 @@ typedef std::variant<JointJogCommand, TwistCommand, PoseCommand> ServoInput;
 // The output datatype of servo, this structure contains the names of the joints along with their positions, velocities and accelerations.
 struct KinematicState
 {
-  std::vector<std::string> joint_names;
-  Eigen::VectorXd positions, velocities, accelerations;
+  std::vector<std::string> joint_names;// 1. 关节名称列表
+  Eigen::VectorXd positions, velocities, accelerations; // 2. 关节位置、速度和加速度向量
   rclcpp::Time time_stamp;
 
   KinematicState(const int num_joints)

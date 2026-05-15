@@ -112,7 +112,7 @@ void Servo::setSmoothingPlugin()
     std::exit(EXIT_FAILURE);
   }
 
-  // Initialize the smoothing plugin
+  // 初始化平滑插件
   moveit::core::RobotStatePtr robot_state = planning_scene_monitor_->getStateMonitor()->getCurrentState();
   const int num_joints =robot_state->getJointModelGroup(servo_params_.move_group_name)->getActiveJointModelNames().size();
   if (!smoother_->initialize(node_, planning_scene_monitor_->getRobotModel(), num_joints))
