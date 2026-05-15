@@ -59,7 +59,7 @@ Servo::Servo(const rclcpp::Node::SharedPtr& node,
     {
       continue;
     }
-    const auto& subgroup_joint_names =
+    const auto& subgroup_joint_names =// 获取该子组的所有活动关节名称
         planning_scene_monitor_->getRobotModel()->getJointModelGroup(sub_group_name)->getActiveJointModelNames();
 
     JointNameToMoveGroupIndexMap new_map;
@@ -69,11 +69,11 @@ Servo::Servo(const rclcpp::Node::SharedPtr& node,
       // Find subgroup joint name in move group joint names
       const auto move_group_iterator =
           std::find(move_group_joint_names.cbegin(), move_group_joint_names.cend(), joint_name);
-      // Calculate position and add a new mapping of joint name to move group joint vector position
+      // 计算位置并创建关节名称到 move group 索引的映射
       new_map.insert(std::make_pair<std::string, std::size_t>(
           std::string(joint_name), std::distance(move_group_joint_names.cbegin(), move_group_iterator)));
     }
-    // Add new joint name to index map to existing maps
+    // 将新的映射添加到总映射表中
     joint_name_to_index_maps_.insert(
         std::make_pair<std::string, JointNameToMoveGroupIndexMap>(std::string(sub_group_name), std::move(new_map)));
   }
@@ -101,8 +101,10 @@ void Servo::setSmoothingPlugin()
   // Load the smoothing plugin
   try
   {
+    // 1. 创建插件加载器（指定插件包名和插件类型）
     smoother_loader_ = std::make_unique<pluginlib::ClassLoader<online_signal_smoothing::SmoothingBaseClass>>(
         "moveit_core", "online_signal_smoothing::SmoothingBaseClass");
+    // 2. 创建插件实例（根据参数指定的插件名称）
     smoother_ = smoother_loader_->createUniqueInstance(servo_params_.smoothing_filter_plugin_name);
   }
   catch (pluginlib::PluginlibException& ex)
@@ -122,6 +124,7 @@ void Servo::setSmoothingPlugin()
   }
 }
 
+// 对输入的机械臂状态进行平滑处理
 void Servo::doSmoothing(KinematicState& state)
 {
   if (smoother_)
@@ -130,6 +133,7 @@ void Servo::doSmoothing(KinematicState& state)
   }
 }
 
+// 重置平滑插件的状态
 void Servo::resetSmoothing(const KinematicState& state)
 {
   if (smoother_)
@@ -138,11 +142,13 @@ void Servo::resetSmoothing(const KinematicState& state)
   }
 }
 
+// 启动或停止碰撞检查
 void Servo::setCollisionChecking(const bool check_collision)
 {
   check_collision ? collision_monitor_->start() : collision_monitor_->stop();
 }
 
+// 验证参数是否有效
 bool Servo::validateParams(const servo::Params& servo_params)
 {
   bool params_valid = true;

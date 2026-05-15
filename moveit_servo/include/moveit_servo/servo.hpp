@@ -172,7 +172,6 @@ private:
                             const KinematicState& target_state) const;
 
   // 变量
-
   StatusCode servo_status_;
   // 此变量需要线程安全，以便可以实时更新
   std::atomic<CommandType> expected_command_type_;
