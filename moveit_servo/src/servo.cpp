@@ -162,6 +162,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
+  //停止阈值必须大于减速阈值，否则逻辑矛盾
   if (servo_params.hard_stop_singularity_threshold <= servo_params.lower_singularity_threshold)
   {
     RCLCPP_ERROR_STREAM(logger_, "The parameter 'hard_stop_singularity_threshold' "
@@ -173,6 +174,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
+  //至少有一个发布参数必须为真，否则没有输出
   if (!servo_params.publish_joint_positions && !servo_params.publish_joint_velocities &&
       !servo_params.publish_joint_accelerations)
   {
@@ -183,6 +185,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
+  //当发布类型为 std_msgs/Float64MultiArray 时，位置和速度不能同时发布
   if ((servo_params.command_out_type == "std_msgs/Float64MultiArray") && servo_params.publish_joint_positions &&
       servo_params.publish_joint_velocities)
   {
@@ -194,6 +197,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
+  //自碰撞阈值必须小于或等于场景碰撞阈值，否则逻辑矛盾
   if (servo_params.scene_collision_proximity_threshold < servo_params.self_collision_proximity_threshold)
   {
     RCLCPP_ERROR_STREAM(logger_, "The parameter 'self_collision_proximity_threshold' should probably be less "
@@ -205,6 +209,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
+  //活动子组必须是有效子组，否则逻辑矛盾
   if (!servo_params.active_subgroup.empty() && servo_params.active_subgroup != servo_params.move_group_name &&
       !joint_model_group->isSubgroup(servo_params.active_subgroup))
   {
@@ -215,7 +220,8 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  const auto num_dofs = robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveVariableCount();
+  //
+  const auto num_dofs = robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveVariableCount();// 获取活动关节数量
   if (servo_params.joint_limit_margins.size() == 1u)
   {
     joint_limit_margins_.clear();
@@ -301,8 +307,9 @@ void Servo::setCommandType(const CommandType& command_type)
   expected_command_type_ = command_type;
 }
 
-KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_halt,
-                                 const KinematicState& current_state, const KinematicState& target_state) const
+KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_halt,// 需要制动的关节索引
+                                 const KinematicState& current_state,// 当前实际状态
+                                  const KinematicState& target_state) const // 目标计算状态
 {
   KinematicState bounded_state(target_state.joint_names.size());
   bounded_state.joint_names = target_state.joint_names;
@@ -320,12 +327,13 @@ KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_h
 
   if (all_joint_halt)
   {
-    // The velocities are initialized to zero by default, so we don't need to set it here.
+    
+    // 速度已初始化为零，默认情况下，因此我们在这里不需要设置它，所有关节限制为当前位置
     bounded_state.positions = current_state.positions;
   }
   else
   {
-    // Halt only the joints that are out of bounds
+    // 只制动超出范围的关节
     bounded_state.positions = target_state.positions;
     bounded_state.velocities = target_state.velocities;
     for (const auto idx : joint_variables_to_halt)
