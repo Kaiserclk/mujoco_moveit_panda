@@ -47,24 +47,24 @@ typedef std::pair<StatusCode, Eigen::VectorXd> JointDeltaResult;
 // The joint jog command, this will be vector of length equal to the number of joints of the robot.
 struct JointJogCommand
 {
-  std::vector<std::string> names;
-  std::vector<double> velocities;
+  std::vector<std::string> names; // 关节名称列表
+  std::vector<double> velocities;  // 对应的关节速度
 };
 
 // The twist command,  frame_id is the name of the frame in which the command is specified in.
 // frame_id must always be specified.
 struct TwistCommand
 {
-  std::string frame_id;
-  Eigen::Vector<double, 6> velocities;
+  std::string frame_id; // 坐标系名称
+  Eigen::Vector<double, 6> velocities; // 速度向量
 };
 
 // The Pose command,  frame_id is the name of the frame in which the command is specified in.
 // frame_id must always be specified.
 struct PoseCommand
 {
-  std::string frame_id;
-  Eigen::Isometry3d pose;
+  std::string frame_id; // 坐标系名称
+  Eigen::Isometry3d pose; // 姿态矩阵
 };
 
 // The generic input type for servo that can be JointJog, Twist or Pose.
@@ -91,7 +91,7 @@ struct KinematicState
   }
 };
 
-// Mapping joint names and their position in the move group vector
+// // 映射关节名称及其在运动组向量中的位置
 typedef std::unordered_map<std::string, std::size_t> JointNameToMoveGroupIndexMap;
 
 }  // namespace moveit_servo
