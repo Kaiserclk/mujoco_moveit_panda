@@ -44,7 +44,7 @@ enum class CommandType : int8_t  // 强类型枚举，底层用 int8_t 存储
 
 typedef std::pair<StatusCode, Eigen::VectorXd> JointDeltaResult;
 
-// The joint jog command, this will be vector of length equal to the number of joints of the robot.
+// 关节点动指令，该指令为向量形式，向量长度与机器人关节数量一致。
 struct JointJogCommand
 {
   std::vector<std::string> names; // 关节名称列表

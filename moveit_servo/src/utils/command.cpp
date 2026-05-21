@@ -10,14 +10,13 @@ rclcpp::Logger getLogger()
 }
 
 /**
- * @brief Helper function to create a move group deltas vector from a sub group deltas vector. A delta vector for the
- * whole move group is created and all entries zeroed. The elements of the subgroup deltas vector are copied into the
- * correct element of the bigger move group delta vector.
- * @param sub_group_deltas Set of command deltas for a subgroup of the move group actuated by servo
- * @param robot_state Current robot state
- * @param servo_params Servo params
- * @param joint_name_group_index_map Mapping between joint subgroup name and move group joint vector position.
- * @return Delta vector for the whole move group. The elements that don't belong to the actuated subgroup are zero.
+ * @brief 辅助函数，由子组增量向量生成运动组增量向量。先创建完整运动组的增量向量并将所有元素置零，
+ * 再把子组增量向量中的数据复制填充至完整运动组增量向量对应的正确位置。
+ * @param sub_group_deltas 由舵机驱动的运动组子机构对应的指令增量集合
+ * @param robot_state 机器人当前状态
+ * @param servo_params 舵机参数
+ * @param joint_name_group_index_map 关节子组名称与运动组关节向量位置的映射关系
+ * @return 完整运动组增量向量，非当前驱动子组对应的向量元素值均为0
  */
 const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_deltas,
                                            const moveit::core::RobotStatePtr& robot_state,
@@ -27,7 +26,7 @@ const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_delt
   const auto& subgroup_joint_names =
       robot_state->getJointModelGroup(servo_params.active_subgroup)->getActiveJointModelNames();
 
-  // Create
+  // 创建完整的 Move Group 增量向量，初始化为零
   Eigen::VectorXd move_group_delta_theta = Eigen::VectorXd::Zero(
       robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveJointModelNames().size());
   for (size_t index = 0; index < subgroup_joint_names.size(); index++)
@@ -41,7 +40,16 @@ const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_delt
 namespace moveit_servo
 {
 
-JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const moveit::core::RobotStatePtr& robot_state,
+/**
+ * @brief 从关节 jogging 命令生成关节增量
+ * @param command 关节 jogging 命令
+ * @param robot_state 机器人当前状态
+ * @param servo_params 舵机参数
+ * @param joint_name_group_index_map 关节名称与运动组关节向量位置的映射关系
+ * @return 关节增量
+ */
+JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, 
+                                        const moveit::core::RobotStatePtr& robot_state,
                                         const servo::Params& servo_params,
                                         const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
 {
