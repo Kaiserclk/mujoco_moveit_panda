@@ -7,9 +7,13 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(generate_parameter_library REQUIRED)
+
+#auto generate parameters
+generate_parameter_library(servo_control_parameters_lib
+                           config/servo_parameters.yaml)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -23,4 +27,17 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+install(TARGETS
+  servo_control_parameters_lib
+  EXPORT ${PROJECT_NAME}Targets
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(DIRECTORY config 
+DESTINATION share/${PROJECT_NAME})
+
+install(DIRECTORY include/ DESTINATION include/${PROJECT_NAME})
+
+ament_export_targets(${PROJECT_NAME}Targets)
 ament_package()

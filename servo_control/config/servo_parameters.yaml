@@ -1,0 +1,14 @@
+servo:
+################################ GENERAL CONFIG ################################
+  publish_period:
+    type: double
+    read_only: true
+    default_value: 0.01
+    description: " 1 / (Nominal publish rate) [seconds]"
+    validation:
+      gt<>: 0.0
+  joint_names:
+    type: string_array
+    read_only: true
+    default_value: ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"]
+    description: "List of joint names for the servo control"

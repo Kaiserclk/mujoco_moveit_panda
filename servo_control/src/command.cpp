@@ -43,20 +43,13 @@ namespace servo_control
 /**
  * @brief 从关节 jogging 命令生成关节增量
  * @param command 关节 jogging 命令
- * @param robot_state 机器人当前状态
  * @param servo_params 舵机参数
- * @param joint_name_group_index_map 关节名称与运动组关节向量位置的映射关系
  * @return 关节增量
  */
-JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, 
-                                        const moveit::core::RobotStatePtr& robot_state,
-                                        const servo::Params& servo_params)
+JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const servo::Params& servo_params)
 {
-  // Find the target joint position based on the commanded joint velocity
-  const auto& group_name =
-      servo_params.active_subgroup.empty() ? servo_params.move_group_name : servo_params.active_subgroup;
-  const moveit::core::JointModelGroup* joint_model_group = robot_state->getJointModelGroup(group_name);
-  const auto joint_names = joint_model_group->getActiveJointModelNames();
+
+  const auto joint_names = servo_params.joint_names;
   Eigen::VectorXd joint_position_delta(joint_names.size());
   Eigen::VectorXd velocities(joint_names.size());
 
@@ -81,9 +74,8 @@ JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command,
     {
       RCLCPP_WARN_STREAM(getLogger(), "Invalid joint name: " << command.names[i]
                                                              << "Either you're sending commands for a joint "
-                                                                "that is not part of the move group or certain joints "
-                                                                "cannot be moved because a "
-                                                                "subgroup is active and they are not part of it.");
+                                                                "that is not part of the certain joints "
+                                                                "cannot be moved because a ");
       return std::make_pair(StatusCode::INVALID, joint_position_delta);
     }
   }
@@ -98,12 +90,6 @@ JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command,
   if (servo_params.command_in_type == "unitless")
   {
     joint_position_delta *= servo_params.scale.joint;
-  }
-
-  if (!servo_params.active_subgroup.empty() && servo_params.active_subgroup != servo_params.move_group_name)
-  {
-    return std::make_pair(StatusCode::NO_WARNING, createMoveGroupDelta(joint_position_delta, robot_state, servo_params,
-                                                                       joint_name_group_index_map));
   }
 
   return std::make_pair(StatusCode::NO_WARNING, joint_position_delta);
