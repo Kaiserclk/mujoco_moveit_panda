@@ -19,8 +19,7 @@ namespace servo_control
  * @param joint_name_group_index_map 关节子组名称与运动组关节向量位置的映射关系
  * @return 执行状态及所需的关节位置变化量（增量值）
  */
-JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const moveit::core::RobotStatePtr& robot_state,
-                                        const servo::Params& servo_params);
+JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const servo::Params& servo_params);
 
 
 /**

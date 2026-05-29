@@ -12,3 +12,26 @@ servo:
     read_only: true
     default_value: ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"]
     description: "List of joint names for the servo control"
+
+  scale:
+    linear: {
+      type: double,
+      default_value: 0.4,
+      description: "若采用速度单位或进行位姿跟踪，该值为最大线速度（单位：米 / 秒）；否则作为无量纲指令速度的缩放系数。适用于笛卡尔空间运动及位姿跟踪指令。"
+    }
+    rotational: {
+      type: double,
+      default_value: 0.8,
+      description: "若使用速度单位或进行位姿跟踪，该值为最大角速度（单位：弧度 / 秒）；否则作为无量纲指令速度的缩放系数。适用于笛卡尔空间运动及位姿跟踪指令。"
+    }
+    joint: {
+      type: double,
+      default_value: 0.5,
+      description: "关节角速度 / 线速度缩放系数。仅适用于无量纲关节指令。"
+    }
+
+  incoming_command_timeout: {
+    type: double,
+    default_value: 0.1,
+    description: "指令超时时间（单位：秒），超时指令将被丢弃。该参数至关重要，因为 ROS 系统可能会丢失部分消息"
+  }

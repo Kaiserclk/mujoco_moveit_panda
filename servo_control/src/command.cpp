@@ -100,9 +100,7 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
                                      const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
 {
   StatusCode status = StatusCode::NO_WARNING;
-  const int num_joints =
-      robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveJointModelNames().size();
-  Eigen::VectorXd joint_position_delta(num_joints);
+  Eigen::VectorXd joint_position_delta(servo_params.joint_names.size());
   Eigen::Vector<double, 6> cartesian_position_delta;
 
   if (command.frame_id != planning_frame)
