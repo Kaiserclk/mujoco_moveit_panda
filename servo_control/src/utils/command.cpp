@@ -8,33 +8,6 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.ros.servo");
 }
-
-/**
- * @brief 辅助函数，由子组增量向量生成运动组增量向量。先创建完整运动组的增量向量并将所有元素置零，
- * 再把子组增量向量中的数据复制填充至完整运动组增量向量对应的正确位置。
- * @param sub_group_deltas 由舵机驱动的运动组子机构对应的指令增量集合
- * @param robot_state 机器人当前状态
- * @param servo_params 舵机参数
- * @param joint_name_group_index_map 关节子组名称与运动组关节向量位置的映射关系
- * @return 完整运动组增量向量，非当前驱动子组对应的向量元素值均为0
- */
-const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_deltas,
-                                           const moveit::core::RobotStatePtr& robot_state,
-                                           const servo::Params& servo_params,
-                                           const moveit_servo::JointNameToMoveGroupIndexMap& joint_name_group_index_map)
-{
-  const auto& subgroup_joint_names =
-      robot_state->getJointModelGroup(servo_params.active_subgroup)->getActiveJointModelNames();
-
-  // 创建完整的 Move Group 增量向量，初始化为零
-  Eigen::VectorXd move_group_delta_theta = Eigen::VectorXd::Zero(
-      robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveJointModelNames().size());
-  for (size_t index = 0; index < subgroup_joint_names.size(); index++)
-  {
-    move_group_delta_theta[joint_name_group_index_map.at(subgroup_joint_names.at(index))] = sub_group_deltas[index];
-  }
-  return move_group_delta_theta;
-};
 }  // namespace
 
 namespace servo_control
@@ -46,7 +19,7 @@ namespace servo_control
  * @param servo_params 舵机参数
  * @return 关节增量
  */
-JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const servo::Params& servo_params)
+JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const servo_control::Params& servo_params)
 {
 
   const auto joint_names = servo_params.joint_names;
@@ -96,8 +69,7 @@ JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const se
 }
 
 JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::core::RobotStatePtr& robot_state,
-                                     const servo::Params& servo_params, const std::string& planning_frame,
-                                     const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
+                                     const servo_control::Params& servo_params, const std::string& planning_frame)
 {
   StatusCode status = StatusCode::NO_WARNING;
   Eigen::VectorXd joint_position_delta(servo_params.joint_names.size());
@@ -123,16 +95,15 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
   {
     // Compute the Cartesian position delta based on incoming twist command.
     cartesian_position_delta = command.velocities * servo_params.publish_period;
-    // 该缩放系数本应作用于控制指令
-    // 但此处仅单次使用，因此不对指令副本进行创建
-    // 改为直接对计算得出的笛卡尔坐标增量执行缩放处理
     if (servo_params.command_in_type == "unitless")
     {
+      // 无单位指令
       cartesian_position_delta.head<3>() *= servo_params.scale.linear;
       cartesian_position_delta.tail<3>() *= servo_params.scale.rotational;
     }
     else if (servo_params.command_in_type == "speed_units")
     {
+      // 速度单位指令
       if (servo_params.scale.linear > 0.0)
       {
         const auto linear_speed_scale = command.velocities.head<3>().norm() / servo_params.scale.linear;
@@ -153,7 +124,7 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
 
     // Compute the required change in joint angles.
     const auto delta_result =
-        jointDeltaFromIK(cartesian_position_delta, robot_state, servo_params, joint_name_group_index_map);
+        jointDeltaFromIK(cartesian_position_delta, robot_state, servo_params);
     status = delta_result.first;
     if (status != StatusCode::INVALID)
     {
@@ -175,14 +146,12 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
 }
 
 JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::core::RobotStatePtr& robot_state,
-                                    const servo::Params& servo_params, const std::string& planning_frame,
+                                    const servo_control::Params& servo_params, const std::string& planning_frame,
                                     const std::string& ee_frame,
                                     const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
 {
   StatusCode status = StatusCode::NO_WARNING;
-  const int num_joints =
-      robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveJointModelNames().size();
-  Eigen::VectorXd joint_position_delta(num_joints);
+  Eigen::VectorXd joint_position_delta(servo_params.joint_names.size());
 
   if (!isValidCommand(command))
   {
@@ -197,13 +166,12 @@ JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::co
   }
 
   Eigen::Vector<double, 6> cartesian_position_delta;
-
   // Compute linear and angular change needed.
   const Eigen::Isometry3d ee_pose{ robot_state->getGlobalLinkTransform(planning_frame).inverse() *
                                    robot_state->getGlobalLinkTransform(ee_frame) };
   const Eigen::Quaterniond q_current(ee_pose.rotation());
   Eigen::Quaterniond q_target(command.pose.rotation());
-  Eigen::Vector3d translation_error = command.pose.translation() - ee_pose.translation();
+  Eigen::Vector3d translation_error = command.pose.translation() - ee_pose.translation();//计算目标位置与当前位置的差值
 
   // Limit the commands by the maximum linear and angular speeds provided.
   if (servo_params.scale.linear > 0.0)
@@ -217,10 +185,12 @@ JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::co
   }
   if (servo_params.scale.rotational > 0.0)
   {
+    //计算两个四元数之间的角度差（最短旋转角度）
     const auto angular_speed_scale =
         (std::abs(q_target.angularDistance(q_current)) / servo_params.publish_period) / servo_params.scale.rotational;
     if (angular_speed_scale > 1.0)
     {
+      //球面线性插值
       q_target = q_current.slerp(1.0 / angular_speed_scale, q_target);
     }
   }
@@ -232,7 +202,7 @@ JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::co
 
   // Compute the required change in joint angles.
   const auto delta_result =
-      jointDeltaFromIK(cartesian_position_delta, robot_state, servo_params, joint_name_group_index_map);
+      jointDeltaFromIK(cartesian_position_delta, robot_state, servo_params);
   status = delta_result.first;
   if (status != StatusCode::INVALID)
   {
@@ -252,17 +222,16 @@ JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::co
 }
 
 JointDeltaResult jointDeltaFromIK(const Eigen::VectorXd& cartesian_position_delta,
-                                  const moveit::core::RobotStatePtr& robot_state, const servo::Params& servo_params,
-                                  const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
+                                  const moveit::core::RobotStatePtr& robot_state, 
+                                  const servo_control::Params& servo_params)
 {
-  const auto& group_name =
-      servo_params.active_subgroup.empty() ? servo_params.move_group_name : servo_params.active_subgroup;
+  const auto& group_name =servo_params.move_group_name;
   const moveit::core::JointModelGroup* joint_model_group = robot_state->getJointModelGroup(group_name);
 
   std::vector<double> current_joint_positions;
   robot_state->copyJointGroupPositions(joint_model_group, current_joint_positions);
 
-  Eigen::VectorXd delta_theta(current_joint_positions.size());
+  Eigen::VectorXd delta_theta(servo_params.joint_names.size());
   StatusCode status = StatusCode::NO_WARNING;
 
   const kinematics::KinematicsBaseConstPtr ik_solver = joint_model_group->getSolverInstance();
@@ -292,7 +261,10 @@ JointDeltaResult jointDeltaFromIK(const Eigen::VectorXd& cartesian_position_delt
     moveit_msgs::msg::MoveItErrorCodes err;
     kinematics::KinematicsQueryOptions opts;
     opts.return_approximate_solution = true;
-    if (ik_solver->searchPositionIK(next_pose, current_joint_positions, servo_params.publish_period / 2.0, solution,
+    if (ik_solver->searchPositionIK(next_pose, // 目标位姿
+                                    current_joint_positions,// 初始猜测（当前关节角度）
+                                    servo_params.publish_period / 2.0, // 采样时间
+                                    solution,     // 输出：求解得到的关节角度
                                     err, opts))
     {
       // find the difference in joint positions that will get us to the desired pose
@@ -309,6 +281,7 @@ JointDeltaResult jointDeltaFromIK(const Eigen::VectorXd& cartesian_position_delt
   }
   else
   {
+    //先略过此部分，后续再了解雅可比的解法
     // Robot does not have an IK solver, use inverse Jacobian to compute IK.
     const Eigen::MatrixXd jacobian = robot_state->getJacobian(joint_model_group);
     const Eigen::JacobiSVD<Eigen::MatrixXd> svd =
@@ -319,11 +292,6 @@ JointDeltaResult jointDeltaFromIK(const Eigen::VectorXd& cartesian_position_delt
     delta_theta = pseudo_inverse * cartesian_position_delta;
   }
 
-  if (!servo_params.active_subgroup.empty() && servo_params.active_subgroup != servo_params.move_group_name)
-  {
-    return std::make_pair(status,
-                          createMoveGroupDelta(delta_theta, robot_state, servo_params, joint_name_group_index_map));
-  }
 
   return std::make_pair(status, delta_theta);
 }
