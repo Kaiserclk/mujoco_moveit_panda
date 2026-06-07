@@ -45,7 +45,8 @@ servo:
   active_subgroup: {
     type: string,
     default_value: "",
-    description: "该参数可在线切换驱动运动组内的子分组，参数为空时则驱动整个完整运动组。"
+    description: "This parameter can be used to switch online to actuating a subgroup of the move group. \
+    If it is empty, the full move group is actuated."
   }
 
 ############################# INCOMING COMMAND SETTINGS ########################

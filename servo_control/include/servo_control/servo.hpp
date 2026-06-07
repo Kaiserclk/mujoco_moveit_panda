@@ -186,11 +186,8 @@ private:
   // 指向（可选）平滑插件的指针
   pluginlib::UniquePtr<online_signal_smoothing::SmoothingBaseClass> smoother_ = nullptr;
 
-  // 关节子组名称与对应关节名称 - move group 索引映射之间的关系
-  std::unordered_map<std::string, JointNameToMoveGroupIndexMap> joint_name_to_index_maps_;
-
   // 每个活动关节位置变量的当前关节限制安全边界
   std::vector<double> joint_limit_margins_;
 };
 
-}  // namespace moveit_servo
+}  // namespace servo_control

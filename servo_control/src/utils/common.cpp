@@ -145,7 +145,7 @@ namespace servo_control
    * @return std::optional<trajectory_msgs::msg::JointTrajectory> 轨迹消息；如果滚动窗口中的点数少于 MIN_POINTS_FOR_TRAJ_MSG，则返回 std::nullopt
    */
   std::optional<trajectory_msgs::msg::JointTrajectory>
-  composeTrajectoryMessage(const servo::Params &servo_params, const std::deque<KinematicState> &joint_cmd_rolling_window)
+  composeTrajectoryMessage(const servo_control::Params &servo_params, const std::deque<KinematicState> &joint_cmd_rolling_window)
   {
     if (joint_cmd_rolling_window.size() < MIN_POINTS_FOR_TRAJ_MSG)
     {
@@ -266,7 +266,7 @@ namespace servo_control
    * @param joint_state 关节状态
    * @return std_msgs::msg::Float64MultiArray 多数组消息
    */
-  std_msgs::msg::Float64MultiArray composeMultiArrayMessage(const servo::Params &servo_params,
+  std_msgs::msg::Float64MultiArray composeMultiArrayMessage(const servo_control::Params &servo_params,
                                                             const KinematicState &joint_state)
   {
     std_msgs::msg::Float64MultiArray multi_array;
@@ -299,7 +299,7 @@ namespace servo_control
    */
   std::pair<double, StatusCode> velocityScalingFactorForSingularity(const moveit::core::RobotStatePtr &robot_state,
                                                                     const Eigen::VectorXd &target_delta_x,
-                                                                    const servo::Params &servo_params)
+                                                                    const servo_control::Params &servo_params)
   {
     // We need to send information back about if we are halting, moving away or towards the singularity.
     StatusCode servo_status = StatusCode::NO_WARNING;
@@ -528,7 +528,7 @@ namespace servo_control
    */
 
   planning_scene_monitor::PlanningSceneMonitorPtr createPlanningSceneMonitor(const rclcpp::Node::SharedPtr &node,
-                                                                             const servo::Params &servo_params)
+                                                                             const servo_control::Params &servo_params)
   {
     // Can set robot_description name from parameters
     std::string robot_description_name = "robot_description";

@@ -68,7 +68,7 @@ private:
 
   const rclcpp::Node::SharedPtr node_;
   std::unique_ptr<Servo> servo_;
-  servo::Params servo_params_;
+  servo_control::Params servo_params_;
   planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_;
 
   KinematicState last_commanded_state_;  // Used when commands go stale;
@@ -101,4 +101,4 @@ private:
   std::deque<KinematicState> joint_cmd_rolling_window_;
 };
 
-}  // namespace moveit_servo
+}  // namespace servo_control

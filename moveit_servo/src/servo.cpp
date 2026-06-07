@@ -1,3 +1,42 @@
+/*******************************************************************************
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Los Alamos National Security, LLC
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * * Neither the name of the copyright holder nor the names of its
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+
+/*      Title     : servo.cpp
+ *      Project   : moveit_servo
+ *      Created   : 05/17/2023
+ *      Author    : Brian O'Neil, Andy Zelenak, Blake Anderson, V Mohammed Ibrahim
+ */
+
 #include <moveit_servo/servo.hpp>
 #include <moveit_servo/utils/command.hpp>
 #include <moveit_servo/utils/common.hpp>
@@ -7,17 +46,16 @@
 // Disable -Wold-style-cast because all _THROTTLE macros trigger this
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
-namespace //匿名命名空间，里面的内容只在当前文件内可见
+namespace
 {
-constexpr double ROBOT_STATE_WAIT_TIME = 5.0;  //等待机器人状态的最大时间
-constexpr double STOPPED_VELOCITY_EPS = 1e-4; //判断机器人是否停止的速度阈值
+constexpr double ROBOT_STATE_WAIT_TIME = 5.0;  // seconds
+constexpr double STOPPED_VELOCITY_EPS = 1e-4;
 }  // namespace
 
 namespace moveit_servo
 {
 
-Servo::Servo(const rclcpp::Node::SharedPtr& node, 
-            std::shared_ptr<const servo::ParamListener> servo_param_listener,
+Servo::Servo(const rclcpp::Node::SharedPtr& node, std::shared_ptr<const servo::ParamListener> servo_param_listener,
              const planning_scene_monitor::PlanningSceneMonitorPtr& planning_scene_monitor)
   : node_(node)
   , logger_(moveit::getLogger("moveit.ros.servo"))
@@ -59,7 +97,7 @@ Servo::Servo(const rclcpp::Node::SharedPtr& node,
     {
       continue;
     }
-    const auto& subgroup_joint_names =// 获取该子组的所有活动关节名称
+    const auto& subgroup_joint_names =
         planning_scene_monitor_->getRobotModel()->getJointModelGroup(sub_group_name)->getActiveJointModelNames();
 
     JointNameToMoveGroupIndexMap new_map;
@@ -69,11 +107,11 @@ Servo::Servo(const rclcpp::Node::SharedPtr& node,
       // Find subgroup joint name in move group joint names
       const auto move_group_iterator =
           std::find(move_group_joint_names.cbegin(), move_group_joint_names.cend(), joint_name);
-      // 计算位置并创建关节名称到 move group 索引的映射
+      // Calculate position and add a new mapping of joint name to move group joint vector position
       new_map.insert(std::make_pair<std::string, std::size_t>(
           std::string(joint_name), std::distance(move_group_joint_names.cbegin(), move_group_iterator)));
     }
-    // 将新的映射添加到总映射表中
+    // Add new joint name to index map to existing maps
     joint_name_to_index_maps_.insert(
         std::make_pair<std::string, JointNameToMoveGroupIndexMap>(std::string(sub_group_name), std::move(new_map)));
   }
@@ -101,10 +139,8 @@ void Servo::setSmoothingPlugin()
   // Load the smoothing plugin
   try
   {
-    // 1. 创建插件加载器（指定插件包名和插件类型）
     smoother_loader_ = std::make_unique<pluginlib::ClassLoader<online_signal_smoothing::SmoothingBaseClass>>(
         "moveit_core", "online_signal_smoothing::SmoothingBaseClass");
-    // 2. 创建插件实例（根据参数指定的插件名称）
     smoother_ = smoother_loader_->createUniqueInstance(servo_params_.smoothing_filter_plugin_name);
   }
   catch (pluginlib::PluginlibException& ex)
@@ -114,9 +150,10 @@ void Servo::setSmoothingPlugin()
     std::exit(EXIT_FAILURE);
   }
 
-  // 初始化平滑插件
+  // Initialize the smoothing plugin
   moveit::core::RobotStatePtr robot_state = planning_scene_monitor_->getStateMonitor()->getCurrentState();
-  const int num_joints =robot_state->getJointModelGroup(servo_params_.move_group_name)->getActiveJointModelNames().size();
+  const int num_joints =
+      robot_state->getJointModelGroup(servo_params_.move_group_name)->getActiveJointModelNames().size();
   if (!smoother_->initialize(node_, planning_scene_monitor_->getRobotModel(), num_joints))
   {
     RCLCPP_ERROR(logger_, "Smoothing plugin could not be initialized");
@@ -124,7 +161,6 @@ void Servo::setSmoothingPlugin()
   }
 }
 
-// 对输入的机械臂状态进行平滑处理
 void Servo::doSmoothing(KinematicState& state)
 {
   if (smoother_)
@@ -133,7 +169,6 @@ void Servo::doSmoothing(KinematicState& state)
   }
 }
 
-// 重置平滑插件的状态
 void Servo::resetSmoothing(const KinematicState& state)
 {
   if (smoother_)
@@ -142,13 +177,11 @@ void Servo::resetSmoothing(const KinematicState& state)
   }
 }
 
-// 启动或停止碰撞检查
 void Servo::setCollisionChecking(const bool check_collision)
 {
   check_collision ? collision_monitor_->start() : collision_monitor_->stop();
 }
 
-// 验证参数是否有效
 bool Servo::validateParams(const servo::Params& servo_params)
 {
   bool params_valid = true;
@@ -162,7 +195,6 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //停止阈值必须大于减速阈值，否则逻辑矛盾
   if (servo_params.hard_stop_singularity_threshold <= servo_params.lower_singularity_threshold)
   {
     RCLCPP_ERROR_STREAM(logger_, "The parameter 'hard_stop_singularity_threshold' "
@@ -174,7 +206,6 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //至少有一个发布参数必须为真，否则没有输出
   if (!servo_params.publish_joint_positions && !servo_params.publish_joint_velocities &&
       !servo_params.publish_joint_accelerations)
   {
@@ -185,7 +216,6 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //当发布类型为 std_msgs/Float64MultiArray 时，位置和速度不能同时发布
   if ((servo_params.command_out_type == "std_msgs/Float64MultiArray") && servo_params.publish_joint_positions &&
       servo_params.publish_joint_velocities)
   {
@@ -197,7 +227,6 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //自碰撞阈值必须小于或等于场景碰撞阈值，否则逻辑矛盾
   if (servo_params.scene_collision_proximity_threshold < servo_params.self_collision_proximity_threshold)
   {
     RCLCPP_ERROR_STREAM(logger_, "The parameter 'self_collision_proximity_threshold' should probably be less "
@@ -209,7 +238,6 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //活动子组必须是有效子组，否则逻辑矛盾
   if (!servo_params.active_subgroup.empty() && servo_params.active_subgroup != servo_params.move_group_name &&
       !joint_model_group->isSubgroup(servo_params.active_subgroup))
   {
@@ -220,8 +248,7 @@ bool Servo::validateParams(const servo::Params& servo_params)
     params_valid = false;
   }
 
-  //
-  const auto num_dofs = robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveVariableCount();// 获取活动关节数量
+  const auto num_dofs = robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveVariableCount();
   if (servo_params.joint_limit_margins.size() == 1u)
   {
     joint_limit_margins_.clear();
@@ -307,9 +334,8 @@ void Servo::setCommandType(const CommandType& command_type)
   expected_command_type_ = command_type;
 }
 
-KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_halt,// 需要制动的关节索引
-                                 const KinematicState& current_state,// 当前实际状态
-                                  const KinematicState& target_state) const // 目标计算状态
+KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_halt,
+                                 const KinematicState& current_state, const KinematicState& target_state) const
 {
   KinematicState bounded_state(target_state.joint_names.size());
   bounded_state.joint_names = target_state.joint_names;
@@ -327,13 +353,12 @@ KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_h
 
   if (all_joint_halt)
   {
-    
-    // 速度已初始化为零，默认情况下，因此我们在这里不需要设置它，所有关节限制为当前位置
+    // The velocities are initialized to zero by default, so we don't need to set it here.
     bounded_state.positions = current_state.positions;
   }
   else
   {
-    // 只制动超出范围的关节
+    // Halt only the joints that are out of bounds
     bounded_state.positions = target_state.positions;
     bounded_state.velocities = target_state.velocities;
     for (const auto idx : joint_variables_to_halt)
@@ -346,13 +371,9 @@ KinematicState Servo::haltJoints(const std::vector<size_t>& joint_variables_to_h
   return bounded_state;
 }
 
-//将不同类型的伺服命令转换为关节空间的位置增量（joint position deltas）
-Eigen::VectorXd Servo::jointDeltaFromCommand(const ServoInput& command, // 伺服命令
-                                             const moveit::core::RobotStatePtr& robot_state//当前机器人状态
-                                            )
+Eigen::VectorXd Servo::jointDeltaFromCommand(const ServoInput& command, const moveit::core::RobotStatePtr& robot_state)
 {
   // Determine joint_name_group_index_map, if no subgroup is active, the map is empty
-  // 确定关节名与分组索引映射表，若无启用的子组，则该映射表为空
   const auto& active_subgroup_name =
       servo_params_.active_subgroup.empty() ? servo_params_.move_group_name : servo_params_.active_subgroup;
   const auto& joint_name_group_index_map = (active_subgroup_name != servo_params_.move_group_name) ?
@@ -371,14 +392,14 @@ Eigen::VectorXd Servo::jointDeltaFromCommand(const ServoInput& command, // 伺�
   {
     if (expected_type == CommandType::JOINT_JOG)
     {
-      //处理关节空间命令
       delta_result = jointDeltaFromJointJog(std::get<JointJogCommand>(command), robot_state, servo_params_,
                                             joint_name_group_index_map);
       servo_status_ = delta_result.first;
     }
     else if (expected_type == CommandType::TWIST)
     {
-      // 执行速度指令前，先将其转换至规划坐标系（即当前生效子组逆运动学求解器的基坐标系），同时校验逆运动学求解器存在且坐标转换成功。
+      // Transform the twist command to the planning frame, which is the base frame of the active subgroup's IK solver,
+      // before applying it. Additionally verify there is an IK solver, and that the transformation is successful.
       const auto planning_frame_maybe = getIKSolverBaseFrame(robot_state, active_subgroup_name);
       if (planning_frame_maybe.has_value())
       {
@@ -386,7 +407,6 @@ Eigen::VectorXd Servo::jointDeltaFromCommand(const ServoInput& command, // 伺�
         const auto command_in_planning_frame_maybe = toPlanningFrame(std::get<TwistCommand>(command), planning_frame);
         if (command_in_planning_frame_maybe.has_value())
         {
-          //进行逆运动学计算，将笛卡尔速度转换为关节速度增量
           delta_result = jointDeltaFromTwist(*command_in_planning_frame_maybe, robot_state, servo_params_,
                                              planning_frame, joint_name_group_index_map);
           servo_status_ = delta_result.first;
@@ -405,10 +425,9 @@ Eigen::VectorXd Servo::jointDeltaFromCommand(const ServoInput& command, // 伺�
     }
     else if (expected_type == CommandType::POSE)
     {
-      // 在执行姿态指令前，将其转换到规划坐标系下
-      // 规划坐标系是当前活动子组逆运动学求解器的基坐标系
-      // 同时，将末端执行器坐标系提取为逆运动学求解器的顶端坐标系
-      // 此外，需验证逆运动学求解器已存在，且坐标变换执行成功
+      // Transform the pose command to the planning frame, which is the base frame of the active subgroup's IK solver,
+      // before applying it. The end effector frame is also extracted as the tip frame of the IK solver.
+      // Additionally verify there is an IK solver, and that the transformation is successful.
       const auto planning_frame_maybe = getIKSolverBaseFrame(robot_state, active_subgroup_name);
       const auto ee_frame_maybe = getIKSolverTipFrame(robot_state, active_subgroup_name);
       if (planning_frame_maybe.has_value() && ee_frame_maybe.has_value())
@@ -482,17 +501,17 @@ KinematicState Servo::getNextJointState(const moveit::core::RobotStatePtr& robot
     servo_status_ = StatusCode::HALT_FOR_COLLISION;
   }
 
-  // 仅当指令有效时，继续执行剩余计算逻辑
-  // 若处于停机状态，同样可跳过这些计算
+  // Continue rest of the computations only if the command is valid
+  // The computations can be skipped also in case we are halting.
   if (servo_status_ != StatusCode::INVALID && servo_status_ != StatusCode::HALT_FOR_COLLISION)
   {
     // Compute the next joint positions based on the joint position deltas
     target_state.positions = current_state.positions + joint_position_delta;
 
-    // 计算到达目标位置所需的关节速度
+    // Compute the joint velocities required to reach positions
     target_state.velocities = joint_position_delta / servo_params_.publish_period;
 
-    // 根据关节速度限值，或在适用情况下按用户自定义缩放比例降低速度
+    // Scale down the velocity based on joint velocity limit or user defined scaling if applicable.
     const double joint_velocity_limit_scale = jointLimitVelocityScalingFactor(
         target_state.velocities, joint_bounds, servo_params_.override_velocity_scaling_factor);
     if (joint_velocity_limit_scale < 1.0)  // 1.0 means no scaling.
@@ -501,17 +520,17 @@ KinematicState Servo::getNextJointState(const moveit::core::RobotStatePtr& robot
     }
     target_state.velocities *= joint_velocity_limit_scale;
 
-    // 因为速度可能被缩放，所以需要根据新的速度重新计算位置增量
+    // Adjust joint position based on scaled down velocity
     target_state.positions = current_state.positions + (target_state.velocities * servo_params_.publish_period);
 
     // Apply collision scaling to the joint position delta
     target_state.positions =
         current_state.positions + collision_velocity_scale_ * (target_state.positions - current_state.positions);
 
-    //  根据平滑后的位置重新计算速度
+    // Compute velocities based on smoothed joint positions
     target_state.velocities = (target_state.positions - current_state.positions) / servo_params_.publish_period;
 
-    // 关节限位检查
+    // Check if any joints are going past joint position limits.
     const std::vector<size_t> joint_variables_to_halt =
         jointVariablesToHalt(target_state.positions, target_state.velocities, joint_bounds, joint_limit_margins_);
 
@@ -529,9 +548,8 @@ KinematicState Servo::getNextJointState(const moveit::core::RobotStatePtr& robot
   return target_state;
 }
 
-//计算从规划坐标系到命令坐标系的变换矩阵
-std::optional<Eigen::Isometry3d> Servo::getPlanningToCommandFrameTransform(const std::string& command_frame,// 命令所在的坐标系名称
-                                                                           const std::string& planning_frame) const// 规划坐标系名称
+std::optional<Eigen::Isometry3d> Servo::getPlanningToCommandFrameTransform(const std::string& command_frame,
+                                                                           const std::string& planning_frame) const
 {
   const moveit::core::RobotStatePtr robot_state = planning_scene_monitor_->getStateMonitor()->getCurrentState();
   if (robot_state->knowsFrameTransform(command_frame) && (robot_state->knowsFrameTransform(planning_frame)))
@@ -541,7 +559,6 @@ std::optional<Eigen::Isometry3d> Servo::getPlanningToCommandFrameTransform(const
   }
   else
   {
-    //回退策略：如果至少有一个坐标系不在机器人模型中（如外部传感器坐标系、世界坐标系等），则通过 ROS2 的 TF2 系统查询变换
     try
     {
       return tf2::transformToEigen(
@@ -557,12 +574,11 @@ std::optional<Eigen::Isometry3d> Servo::getPlanningToCommandFrameTransform(const
 
 std::optional<TwistCommand> Servo::toPlanningFrame(const TwistCommand& command, const std::string& planning_frame) const
 {
-  // 计算从规划坐标系到命令坐标系的变换矩阵 velocities = [vx, vy, vz, ωx, ωy, ωz]
   Eigen::VectorXd transformed_twist = command.velocities;
 
   if (command.frame_id != planning_frame)
   {
-    // 查找规划坐标系到命令坐标系的变换矩阵
+    // Look up the transform between the planning and command frames.
     const auto planning_to_command_tf_maybe = getPlanningToCommandFrameTransform(command.frame_id, planning_frame);
     if (!planning_to_command_tf_maybe.has_value())
     {
@@ -570,19 +586,13 @@ std::optional<TwistCommand> Servo::toPlanningFrame(const TwistCommand& command, 
     }
     const auto& planning_to_command_tf = *planning_to_command_tf_maybe;
 
-    // 如果指令是关于末端执行器坐标系应用的，则仅应用变换的旋转部分
     if (servo_params_.apply_twist_commands_about_ee_frame)
     {
       // If the twist command is applied about the end effector frame, simply apply the rotation of the transform.
       const auto planning_to_command_rotation = planning_to_command_tf.linear();
-
-
-      // 只旋转线速度   
       const Eigen::Vector3d translation_vector =
           planning_to_command_rotation *
           Eigen::Vector3d(command.velocities[0], command.velocities[1], command.velocities[2]);
-
-      // 只旋转角速度
       const Eigen::Vector3d angular_vector =
           planning_to_command_rotation *
           Eigen::Vector3d(command.velocities[3], command.velocities[4], command.velocities[5]);
@@ -593,22 +603,20 @@ std::optional<TwistCommand> Servo::toPlanningFrame(const TwistCommand& command, 
     }
     else
     {
-      // 若绕规划坐标系施加旋量指令，则空间旋量的计算方式
-      // 可参考 http://hades.mech.northwestern.edu/images/7/7f/MR.pdf 中的公式 3.83。
-      // 上述公式将旋量定义为 [角速度；线速度]，但在本系统约定中为
-      // [线速度；角速度]，因此伴随矩阵也需相应重新排序。
+      // If the twist command is applied about the planning frame, the spatial twist is calculated
+      // as shown in Equation 3.83 in http://hades.mech.northwestern.edu/images/7/7f/MR.pdf.
+      // The above equation defines twist as [angular; linear], but in our convention it is
+      // [linear; angular] so the adjoint matrix is also reordered accordingly.
       Eigen::MatrixXd adjoint(6, 6);
 
       const Eigen::Matrix3d& rotation = planning_to_command_tf.rotation();
       const Eigen::Vector3d& translation = planning_to_command_tf.translation();
 
-      // 构建平移的反对称矩阵
       Eigen::Matrix3d skew_translation;
       skew_translation.row(0) << 0, -translation(2), translation(1);
       skew_translation.row(1) << translation(2), 0, -translation(0);
       skew_translation.row(2) << -translation(1), translation(0), 0;
 
-      // 构建 6×6 伴随矩阵
       adjoint.topLeftCorner(3, 3) = skew_translation * rotation;
       adjoint.topRightCorner(3, 3) = rotation;
       adjoint.bottomLeftCorner(3, 3) = rotation;

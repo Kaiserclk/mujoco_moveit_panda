@@ -42,18 +42,13 @@ servo_control:
 
 
 ################################ GENERAL CONFIG ################################
-  publish_period:
-    type: double
-    read_only: true
-    default_value: 0.01
-    description: " 1 / (Nominal publish rate) [seconds]"
-    validation:
-      gt<>: 0.0
-  joint_names:
-    type: string_array
-    read_only: true
-    default_value: ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"]
+
+  joint_names: {
+    type: string_array,
+    read_only: true,
+    default_value: ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
     description: "List of joint names for the servo control"
+  }
 
 
 ############################# INCOMING COMMAND SETTINGS ########################
@@ -139,5 +134,165 @@ servo_control:
     description: "Scaling factor when servo overrides the velocity (e.g, near singularities)",
     validation: {
       bounds<>: [0.0, 1.0]
+    }
+  }
+
+  ############################ POSE TRACKING SETTINGS #############################
+
+  pose_tracking:
+    linear_tolerance: {
+        type: double,
+        default_value: 0.001,
+        description: "The allowable linear error, in meters, when tracking a pose.",
+        validation: {
+          gt<>: 0.0
+        }
+    }
+
+    angular_tolerance: {
+        type: double,
+        default_value: 0.01,
+        description: "The allowable angular error, in radians, when tracking a pose.",
+        validation: {
+          gt<>: 0.0
+        }
+    }
+
+
+################################ TWIST SETTINGS #################################
+
+  apply_twist_commands_about_ee_frame: {
+    type: bool,
+    default_value: true,
+    description: "若勾选为真，则位速度指令中设定的角速度将以末端执行器坐标系的坐标轴为基准进行作用；\
+                  若勾选为假，由于末端执行器坐标系与规划坐标系之间存在力臂偏移，求解得到的位速度会附带因末端执行器坐标系绕规划坐标系旋转所产生的线速度分量"
+  }
+
+
+  ############################## OUTGOING COMMAND SETTINGS #######################
+
+  status_topic: {
+    type: string,
+    read_only: true,
+    default_value: "~/status",
+    description: "The topic to which the status will be published"
+  }
+
+  command_out_topic: {
+    type: string,
+    read_only: true,
+    default_value: "/panda_arm_controller/joint_trajectory",
+    description: "The topic on which servo will publish the joint trajectory. Change this to the topic your controller requires."
+  }
+
+  command_out_type: {
+    type: string,
+    read_only: true,
+    default_value: "trajectory_msgs/JointTrajectory",
+    description: "The type of command that servo will publish",
+    validation: {
+      one_of<>: [["trajectory_msgs/JointTrajectory", "std_msgs/Float64MultiArray"]]
+    }
+  }
+
+  publish_joint_positions: {
+    type: bool,
+    default_value: true,
+    description: "If true servo will publish joint positions in the output command"
+  }
+
+  publish_joint_velocities: {
+    type: bool,
+    default_value: true,
+    description: "If true servo will publish joint velocities in the output command"
+  }
+
+  publish_joint_accelerations: {
+    type: bool,
+    default_value: false,
+    description: "If true servo will publish joint accelerations in the output command"
+  }
+
+  ############################## PLANNING SCENE MONITOR ##########################
+
+  monitored_planning_scene_topic: {
+    type: string,
+    read_only: true,
+    default_value: "/planning_scene",
+    description: "The name of the planning scene topic."
+  }
+
+  joint_topic: {
+    type: string,
+    read_only: true,
+    default_value: "/joint_states",
+    description: "The topic on which joint states can be monitored"
+  }
+
+  check_octomap_collisions: {
+    type: bool,
+    read_only: true,
+    default_value: false,
+    description: "If true, the planning scene monitor also listens to octomap updates for collision checking."
+  }
+
+  is_primary_planning_scene_monitor: {
+    type: bool,
+    read_only: true,
+    default_value: true,
+    description: "If true, the Servo server's PlanningScene advertises the /get_planning_scene service."
+  }
+
+  ############################### SMOOTHING PLUGIN ###############################
+
+  use_smoothing: {
+    type: bool,
+    read_only: true,
+    default_value: true,
+    description: "Enables the use of smoothing plugins for joint trajectory smoothing"
+  }
+
+  smoothing_filter_plugin_name: {
+    type: string,
+    read_only: true,
+    default_value: "online_signal_smoothing::ButterworthFilterPlugin",
+    description: "The name of the smoothing plugin to be used"
+  }
+
+  ############################# SINGULARITY CHECKING #############################
+
+  lower_singularity_threshold: {
+    type: double,
+    default_value: 17.0,
+    description: "Start decelerating when the condition number hits this (close to singularity)",
+    validation: {
+      gt<>: 0.0
+    }
+  }
+
+  hard_stop_singularity_threshold: {
+    type: double,
+    default_value: 30.0,
+    description: "Stop when the condition number hits this",
+    validation: {
+      gt<>: 0.0
+    }
+  }
+
+  leaving_singularity_threshold_multiplier: {
+    type: double,
+    default_value: 2.0,
+    description: "When lower_singularity_threshold is triggered but moving away from singularity, move this many times faster",
+    validation: {
+      gt<>: 0.0
+    }
+  }
+
+  singularity_step_scale: {
+    type: double,
+    default_value: 0.01,
+    description: "The test vector towards singularity is scaled by this factor during singularity check",
+    validation: {
+      gt<>: 0.0
     }
   }

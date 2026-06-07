@@ -16,7 +16,9 @@ enum class StatusCode : int8_t
   HALT_FOR_SINGULARITY = 2,                  // 非常接近奇异点，紧急停止
   DECELERATE_FOR_LEAVING_SINGULARITY = 3,    // 离开奇异点，减速
   HALT_FOR_EMERGENCY = 4,                    // 紧急停止
-  JOINT_BOUND = 5                            // 接近关节限位（位置或速度），停止
+  JOINT_BOUND = 5,                           // 接近关节限位（位置或速度），停止
+  DECELERATE_FOR_COLLISION = 6,              // 碰撞风险，减速
+  HALT_FOR_COLLISION = 7                     // 碰撞风险，紧急停止
 };
 
 const std::unordered_map<StatusCode, std::string> SERVO_STATUS_CODE_MAP(
@@ -26,7 +28,9 @@ const std::unordered_map<StatusCode, std::string> SERVO_STATUS_CODE_MAP(
       { StatusCode::HALT_FOR_SINGULARITY, "Very close to a singularity, emergency stop" },
       { StatusCode::DECELERATE_FOR_LEAVING_SINGULARITY, "Moving away from a singularity, decelerating" },
       { StatusCode::HALT_FOR_EMERGENCY, "Emergency stop" },
-      { StatusCode::JOINT_BOUND, "Close to a joint bound (position or velocity), halting" } });
+      { StatusCode::JOINT_BOUND, "Close to a joint bound (position or velocity), halting" },
+      { StatusCode::DECELERATE_FOR_COLLISION, "Close to a collision, decelerating" },
+      { StatusCode::HALT_FOR_COLLISION, "Collision detected, emergency stop" } });
 
 // The datatype that specifies the type of command that servo should expect.
 enum class CommandType : int8_t  
@@ -88,8 +92,5 @@ struct KinematicState
   {
   }
 };
-
-// // 映射关节名称及其在运动组向量中的位置
-typedef std::unordered_map<std::string, std::size_t> JointNameToMoveGroupIndexMap;
 
 }  // namespace servo_control

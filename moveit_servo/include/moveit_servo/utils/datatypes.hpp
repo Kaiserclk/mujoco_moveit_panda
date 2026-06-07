@@ -1,3 +1,43 @@
+/*******************************************************************************
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Los Alamos National Security, LLC
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * * Neither the name of the copyright holder nor the names of its
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+
+/*      Title       : datatypes.hpp
+ *      Project     : moveit_servo
+ *      Created     : 06/05/2023
+ *      Author      : Andy Zelenak, V Mohammed Ibrahim
+ *
+ *      Description : The custom datatypes used by Moveit Servo.
+ */
 
 #pragma once
 
@@ -8,16 +48,16 @@
 namespace moveit_servo
 {
 
-enum class StatusCode : int8_t  // 强类型枚举，底层用 int8_t 存储（节省内存）
+enum class StatusCode : int8_t
 {
-  INVALID = -1,                              // 无效状态
-  NO_WARNING = 0,                            // 正常，无警告
-  DECELERATE_FOR_APPROACHING_SINGULARITY = 1, // 靠近奇异点，减速
-  HALT_FOR_SINGULARITY = 2,                  // 非常接近奇异点，紧急停止
-  DECELERATE_FOR_LEAVING_SINGULARITY = 3,    // 离开奇异点，减速
-  DECELERATE_FOR_COLLISION = 4,              // 接近碰撞，减速
-  HALT_FOR_COLLISION = 5,                    // 检测到碰撞，紧急停止
-  JOINT_BOUND = 6                            // 接近关节限位（位置或速度），停止
+  INVALID = -1,
+  NO_WARNING = 0,
+  DECELERATE_FOR_APPROACHING_SINGULARITY = 1,
+  HALT_FOR_SINGULARITY = 2,
+  DECELERATE_FOR_LEAVING_SINGULARITY = 3,
+  DECELERATE_FOR_COLLISION = 4,
+  HALT_FOR_COLLISION = 5,
+  JOINT_BOUND = 6
 };
 
 const std::unordered_map<StatusCode, std::string> SERVO_STATUS_CODE_MAP(
@@ -31,52 +71,51 @@ const std::unordered_map<StatusCode, std::string> SERVO_STATUS_CODE_MAP(
       { StatusCode::JOINT_BOUND, "Close to a joint bound (position or velocity), halting" } });
 
 // The datatype that specifies the type of command that servo should expect.
-enum class CommandType : int8_t  // 强类型枚举，底层用 int8_t 存储
+enum class CommandType : int8_t
 {
-  JOINT_JOG = 0,    // 关节空间点动命令
-  TWIST = 1,        // 笛卡尔空间速度命令
-  POSE = 2,         // 笛卡尔空间位姿命令
+  JOINT_JOG = 0,
+  TWIST = 1,
+  POSE = 2,
 
-  // 允许值的范围，用于参数验证
-  MIN = JOINT_JOG,  // 最小值 = 0
-  MAX = POSE        // 最大值 = 2
+  // Range of allowed values used for validation.
+  MIN = JOINT_JOG,
+  MAX = POSE
 };
 
 typedef std::pair<StatusCode, Eigen::VectorXd> JointDeltaResult;
 
-// 关节点动指令，该指令为向量形式，向量长度与机器人关节数量一致。
+// The joint jog command, this will be vector of length equal to the number of joints of the robot.
 struct JointJogCommand
 {
-  std::vector<std::string> names; // 关节名称列表
-  std::vector<double> velocities;  // 对应的关节速度
+  std::vector<std::string> names;
+  std::vector<double> velocities;
 };
 
 // The twist command,  frame_id is the name of the frame in which the command is specified in.
 // frame_id must always be specified.
 struct TwistCommand
 {
-  std::string frame_id; // 坐标系名称
-  Eigen::Vector<double, 6> velocities; // 速度向量
+  std::string frame_id;
+  Eigen::Vector<double, 6> velocities;
 };
 
 // The Pose command,  frame_id is the name of the frame in which the command is specified in.
 // frame_id must always be specified.
 struct PoseCommand
 {
-  std::string frame_id; // 坐标系名称
-  Eigen::Isometry3d pose; // 姿态矩阵
+  std::string frame_id;
+  Eigen::Isometry3d pose;
 };
 
 // The generic input type for servo that can be JointJog, Twist or Pose.
 typedef std::variant<JointJogCommand, TwistCommand, PoseCommand> ServoInput;
 
 // The output datatype of servo, this structure contains the names of the joints along with their positions, velocities and accelerations.
-
 struct KinematicState
 {
-  std::vector<std::string> joint_names;// 关节名称列表
-  Eigen::VectorXd positions, velocities, accelerations; // 关节位置、速度和加速度向量
-  rclcpp::Time time_stamp;// 时间戳
+  std::vector<std::string> joint_names;
+  Eigen::VectorXd positions, velocities, accelerations;
+  rclcpp::Time time_stamp;
 
   KinematicState(const int num_joints)
   {
@@ -91,7 +130,7 @@ struct KinematicState
   }
 };
 
-// // 映射关节名称及其在运动组向量中的位置
+// Mapping joint names and their position in the move group vector
 typedef std::unordered_map<std::string, std::size_t> JointNameToMoveGroupIndexMap;
 
 }  // namespace moveit_servo

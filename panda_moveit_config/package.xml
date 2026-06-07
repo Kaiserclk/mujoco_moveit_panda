@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>moveit_resources_panda_moveit_config</name>
+  <name>panda_moveit_config</name>
   <version>3.1.1</version>
   <description>
     <p>

@@ -48,8 +48,8 @@ ServoNode::ServoNode(const rclcpp::NodeOptions& options)
     RCLCPP_WARN_STREAM(node_->get_logger(), "Realtime kernel is recommended for better performance.");
   }
 
-  std::shared_ptr<servo::ParamListener> servo_param_listener =
-      std::make_shared<servo::ParamListener>(node_, "moveit_servo");
+  std::shared_ptr<servo_control::ParamListener> servo_param_listener =
+      std::make_shared<servo_control::ParamListener>(node_, "servo_control");
 
   // Create Servo instance
   planning_scene_monitor_ = createPlanningSceneMonitor(node_, servo_param_listener->get_params());
@@ -120,7 +120,6 @@ void ServoNode::pauseServo(const std::shared_ptr<std_srvs::srv::SetBool::Request
   response->success = (servo_paused_ == request->data);
   if (servo_paused_)
   {
-    servo_->setCollisionChecking(false);
     response->message = "Servoing disabled";
   }
   else
@@ -132,8 +131,7 @@ void ServoNode::pauseServo(const std::shared_ptr<std_srvs::srv::SetBool::Request
     // clear out the command rolling window and reset last commanded state to be the current state
     joint_cmd_rolling_window_.clear();
 
-    // reactivate collision checking
-    servo_->setCollisionChecking(true);
+    // reactivate collision checking (no-op without collision monitor)
     response->message = "Servoing enabled";
   }
 }
@@ -391,7 +389,7 @@ void ServoNode::servoLoop()
   }
 }
 
-}  // namespace moveit_servo
+}  // namespace servo_control
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(moveit_servo::ServoNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(servo_control::ServoNode)

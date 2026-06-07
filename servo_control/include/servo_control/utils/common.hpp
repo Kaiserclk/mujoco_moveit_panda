@@ -80,7 +80,7 @@ geometry_msgs::msg::Pose poseFromCartesianDelta(const Eigen::VectorXd& delta_x,
  * @return The trajectory message.
  */
 std::optional<trajectory_msgs::msg::JointTrajectory>
-composeTrajectoryMessage(const servo::Params& servo_params, const std::deque<KinematicState>& joint_cmd_rolling_window);
+composeTrajectoryMessage(const servo_control::Params& servo_params, const std::deque<KinematicState>& joint_cmd_rolling_window);
 
 /**
  * \brief Adds a new joint state command to a queue containing commands over a time window. Also modifies the velocities
@@ -100,7 +100,7 @@ void updateSlidingWindow(KinematicState& next_joint_state, std::deque<KinematicS
  * @param joint_state The joint state to be added into the Float64MultiArray.
  * @return The Float64MultiArray message.
  */
-std_msgs::msg::Float64MultiArray composeMultiArrayMessage(const servo::Params& servo_params,
+std_msgs::msg::Float64MultiArray composeMultiArrayMessage(const servo_control::Params& servo_params,
                                                           const KinematicState& joint_state);
 
 /**
@@ -112,7 +112,7 @@ std_msgs::msg::Float64MultiArray composeMultiArrayMessage(const servo::Params& s
  */
 std::pair<double, StatusCode> velocityScalingFactorForSingularity(const moveit::core::RobotStatePtr& robot_state,
                                                                   const Eigen::VectorXd& target_delta_x,
-                                                                  const servo::Params& servo_params);
+                                                                  const servo_control::Params& servo_params);
 
 /**
  * \brief Apply velocity scaling based on joint limits. If the robot model does not have velocity limits defined,
@@ -159,7 +159,7 @@ PoseCommand poseFromPoseStamped(const geometry_msgs::msg::PoseStamped& msg);
  * \brief Creates the planning scene monitor used by servo
  */
 planning_scene_monitor::PlanningSceneMonitorPtr createPlanningSceneMonitor(const rclcpp::Node::SharedPtr& node,
-                                                                           const servo::Params& servo_params);
+                                                                           const servo_control::Params& servo_params);
 
 /**
  * \brief Extract the state from a RobotStatePtr instance.

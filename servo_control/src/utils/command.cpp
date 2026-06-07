@@ -147,8 +147,7 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
 
 JointDeltaResult jointDeltaFromPose(const PoseCommand& command, const moveit::core::RobotStatePtr& robot_state,
                                     const servo_control::Params& servo_params, const std::string& planning_frame,
-                                    const std::string& ee_frame,
-                                    const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
+                                    const std::string& ee_frame)
 {
   StatusCode status = StatusCode::NO_WARNING;
   Eigen::VectorXd joint_position_delta(servo_params.joint_names.size());
@@ -296,4 +295,4 @@ JointDeltaResult jointDeltaFromIK(const Eigen::VectorXd& cartesian_position_delt
   return std::make_pair(status, delta_theta);
 }
 
-}  // namespace moveit_servo
+}  // namespace servo_control

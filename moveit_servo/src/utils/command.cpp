@@ -1,5 +1,43 @@
+/*******************************************************************************
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Los Alamos National Security, LLC
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * * Neither the name of the copyright holder nor the names of its
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
 
-#include <servo_control/utils/command.hpp>
+/*      Title     : command.cpp
+ *      Project   : moveit_servo
+ *      Created   : 06/04/2023
+ *      Author    : Brian O'Neil, Andy Zelenak, Blake Anderson, V Mohammed Ibrahim
+ */
+
+#include <moveit_servo/utils/command.hpp>
 #include <moveit/utils/logger.hpp>
 
 namespace
@@ -10,13 +48,14 @@ rclcpp::Logger getLogger()
 }
 
 /**
- * @brief 辅助函数，由子组增量向量生成运动组增量向量。先创建完整运动组的增量向量并将所有元素置零，
- * 再把子组增量向量中的数据复制填充至完整运动组增量向量对应的正确位置。
- * @param sub_group_deltas 由舵机驱动的运动组子机构对应的指令增量集合
- * @param robot_state 机器人当前状态
- * @param servo_params 舵机参数
- * @param joint_name_group_index_map 关节子组名称与运动组关节向量位置的映射关系
- * @return 完整运动组增量向量，非当前驱动子组对应的向量元素值均为0
+ * @brief Helper function to create a move group deltas vector from a sub group deltas vector. A delta vector for the
+ * whole move group is created and all entries zeroed. The elements of the subgroup deltas vector are copied into the
+ * correct element of the bigger move group delta vector.
+ * @param sub_group_deltas Set of command deltas for a subgroup of the move group actuated by servo
+ * @param robot_state Current robot state
+ * @param servo_params Servo params
+ * @param joint_name_group_index_map Mapping between joint subgroup name and move group joint vector position.
+ * @return Delta vector for the whole move group. The elements that don't belong to the actuated subgroup are zero.
  */
 const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_deltas,
                                            const moveit::core::RobotStatePtr& robot_state,
@@ -26,7 +65,7 @@ const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_delt
   const auto& subgroup_joint_names =
       robot_state->getJointModelGroup(servo_params.active_subgroup)->getActiveJointModelNames();
 
-  // 创建完整的 Move Group 增量向量，初始化为零
+  // Create
   Eigen::VectorXd move_group_delta_theta = Eigen::VectorXd::Zero(
       robot_state->getJointModelGroup(servo_params.move_group_name)->getActiveJointModelNames().size());
   for (size_t index = 0; index < subgroup_joint_names.size(); index++)
@@ -37,20 +76,12 @@ const Eigen::VectorXd createMoveGroupDelta(const Eigen::VectorXd& sub_group_delt
 };
 }  // namespace
 
-namespace servo_control
+namespace moveit_servo
 {
 
-/**
- * @brief 从关节 jogging 命令生成关节增量
- * @param command 关节 jogging 命令
- * @param robot_state 机器人当前状态
- * @param servo_params 舵机参数
- * @param joint_name_group_index_map 关节名称与运动组关节向量位置的映射关系
- * @return 关节增量
- */
-JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, 
-                                        const moveit::core::RobotStatePtr& robot_state,
-                                        const servo::Params& servo_params)
+JointDeltaResult jointDeltaFromJointJog(const JointJogCommand& command, const moveit::core::RobotStatePtr& robot_state,
+                                        const servo::Params& servo_params,
+                                        const JointNameToMoveGroupIndexMap& joint_name_group_index_map)
 {
   // Find the target joint position based on the commanded joint velocity
   const auto& group_name =
@@ -139,9 +170,9 @@ JointDeltaResult jointDeltaFromTwist(const TwistCommand& command, const moveit::
   {
     // Compute the Cartesian position delta based on incoming twist command.
     cartesian_position_delta = command.velocities * servo_params.publish_period;
-    // 该缩放系数本应作用于控制指令
-    // 但此处仅单次使用，因此不对指令副本进行创建
-    // 改为直接对计算得出的笛卡尔坐标增量执行缩放处理
+    // This scaling is supposed to be applied to the command.
+    // But since it is only used here, we avoid creating a copy of the command,
+    // by applying the scaling to the computed Cartesian delta instead.
     if (servo_params.command_in_type == "unitless")
     {
       cartesian_position_delta.head<3>() *= servo_params.scale.linear;
